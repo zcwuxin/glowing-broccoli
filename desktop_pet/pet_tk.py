@@ -689,6 +689,10 @@ class PetApp:
             }, timeout=60)
             reply = r.json().get("reply", "……")
             self.last_reply = reply
+            # 收集对话历史（保留最近 N 轮）
+            self._conversation_history.append((text, reply))
+            if len(self._conversation_history) > MAX_HISTORY_ROUNDS:
+                self._conversation_history = self._conversation_history[-MAX_HISTORY_ROUNDS:]
 
             logger.info("收到回复 | session=%s | reply=%s", self.session_id, reply[:60])
 
