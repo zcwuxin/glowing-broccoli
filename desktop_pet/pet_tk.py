@@ -372,6 +372,14 @@ class PetApp:
             interval = random.uniform(PROACTIVE_CHECK_INTERVAL_MIN, PROACTIVE_CHECK_INTERVAL_MAX)
             time.sleep(interval)
 
+    def _is_conversation_active(self) -> bool:
+        """判断对话是否处于活跃期"""
+        if self.chat_open:
+            return True
+        if self._chat_closed_time and time.time() - self._chat_closed_time < CONVERSATION_ACTIVE_WINDOW:
+            return True
+        return False
+
     def _check_proactive(self, random):
         """检查触发条件，概率触发 + 随机冷却，更自然"""
         if self.busy:
