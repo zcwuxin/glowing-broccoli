@@ -395,6 +395,21 @@ class PetApp:
         # 不再按类别去重，只靠冷却控制频率
 
         duration = now - self._activity_start
+
+        # 对话活跃期：基于对话上下文而非电脑状态
+        if self._is_conversation_active():
+            if not self._conversation_history:
+                return  # 无历史则跳过，不发主动消息
+            recent = self._conversation_history[-5:]
+            history_lines = []
+            for user_msg, ai_reply in recent:
+                history_lines.append(f"用户：{user_msg}")
+                history_lines.append(f"虞晚：{ai_reply}")
+            message = CONVERSATION_CONTINUE_PROMPT.format(
+                history="\n".join(history_lines))
+            self._do_conversation_continue(message)
+            return
+
         trigger_type = None
         prob = 0.0
         msg_kwargs = {"activity": self.current_activity}
@@ -435,6 +450,32 @@ class PetApp:
         logger.info("主动触发 | type=%s | prob=%.0f%% | duration=%ds",
                    trigger_type, prob * 100, int(duration))
         threading.Thread(target=self._do_proactive_chat, args=(message,), daemon=True).start()
+
+    def _do_conversation_continue(self, message):
+        """发送基于对话上下文的主动消息（不带电脑状态）"""
+        try:
+            if not self.session_id:
+                self.session_id = uuid.uuid4().hex[:16]
+
+            logger.info("对话续接 | session=%s | history_rounds=%d",
+                       self.session_id, len(self._conversation_history))
+
+            r = requests.post(f"{API}/api/chat/bijou", json={
+                "session_id": self.session_id,
+                "message": message,
+                "context": "",  # 不带电脑状态
+            }, timeout=60)
+            reply = r.json().get("reply", "")
+            self.last_reply = reply
+            self._last_proactive_time = time.time()
+
+            logger.info("对话续接回复 | session=%s | reply=%s", self.session_id, reply[:60])
+
+            self.root.after(0, lambda r=reply: self._show_proactive_bubble(r))
+            self.play_tts(reply)
+
+        except Exception:
+            logger.exception("对话续接失败")
 
     def _do_proactive_chat(self, message):
         """发送主动对话请求"""
