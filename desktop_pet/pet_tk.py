@@ -407,7 +407,7 @@ class PetApp:
                 history_lines.append(f"虞晚：{ai_reply}")
             message = CONVERSATION_CONTINUE_PROMPT.format(
                 history="\n".join(history_lines))
-            self._do_conversation_continue(message)
+            threading.Thread(target=self._do_conversation_continue, args=(message,), daemon=True).start()
             return
 
         trigger_type = None
