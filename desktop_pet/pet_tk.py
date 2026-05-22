@@ -520,6 +520,10 @@ class PetApp:
 
     def open_chat(self):
         self.chat_open = True
+        # 超过活跃窗口的旧对话历史视为已结束，清空
+        if self._chat_closed_time and time.time() - self._chat_closed_time >= CONVERSATION_ACTIVE_WINDOW:
+            self._conversation_history = []
+        self._chat_closed_time = 0.0
         if self._use_video_anim and self._talk_frames:
             self.label.configure(image=self._talk_frames[self._anim_index % len(self._talk_frames)])
         else:
@@ -539,6 +543,7 @@ class PetApp:
             self.label.configure(image=self._idle_frames[self._anim_index])
         else:
             self.label.configure(image=self.idle_img)
+        self._chat_closed_time = time.time()
 
     def send_msg(self, event=None):
         text = self.input.get().strip()
