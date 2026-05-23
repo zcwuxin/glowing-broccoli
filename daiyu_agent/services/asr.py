@@ -1,4 +1,5 @@
 """语音识别 —— DashScope gummy-chat-v1（monkey-patch SDK transcription字段）"""
+import re
 import time
 import logging
 import tempfile
@@ -9,6 +10,11 @@ from dashscope.audio.asr import Recognition
 from dashscope.audio.asr.recognition import RecognitionCallback, RecognitionResult
 
 logger = logging.getLogger("asr")
+
+# 音近"虞晚"的常见误识别字符对，ASR 后处理用
+_YU = "鱼于余俞渔愉瑜娱育雨语与玉"
+_WAN = "丸完玩顽万婉湾碗皖"
+_YUWAN_RE = re.compile(f"[{_YU}][{_WAN}]")
 
 from config import DASHSCOPE_API_KEY, ASR_PHRASE_ID
 dashscope.api_key = DASHSCOPE_API_KEY
@@ -63,8 +69,10 @@ async def transcribe(audio_bytes: bytes) -> str:
             language_hints=["zh"],
             callback=_DummyCB(),
         )
+        phrase_id = ASR_PHRASE_ID or None
+        logger.info("ASR phrase_id=%s", phrase_id)
         result = await asyncio.get_running_loop().run_in_executor(
-            None, rec.call, path, ASR_PHRASE_ID or None
+            None, rec.call, path, phrase_id
         )
 
         if result.status_code != 200:
@@ -80,6 +88,7 @@ async def transcribe(audio_bytes: bytes) -> str:
                 text = sentences.get("text", "")
 
         elapsed = (time.time() - t0) * 1000
+        text = _YUWAN_RE.sub("虞晚", text)
         logger.info("ASR完成 | %dms | text=%s", int(elapsed), text[:80] if text else "(空)")
         return text
 
