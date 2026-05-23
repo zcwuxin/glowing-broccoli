@@ -24,14 +24,12 @@ _HOLIDAYS: list[tuple[int, int, str]] = [
     (2, 14, "情人节"),
     (2, 17, "春节"),
     (3, 3, "元宵节"),
-    (4, 5, "清明节"),
     (5, 1, "劳动节"),
     (6, 19, "端午节"),
     (8, 12, "七夕"),
     (9, 25, "中秋节"),
     (10, 1, "国庆节"),
     (10, 11, "重阳节"),
-    (12, 22, "冬至"),
 ]
 
 # 二十四节气（公历近似日期）
@@ -61,18 +59,26 @@ def _get_period(hour: int) -> str:
 def _nearby_events(today: date, days: int = 7) -> list[str]:
     """返回距离 today 在 days 天内的节日/节气名称"""
     result: list[str] = []
-    year = today.year
-    for month, day, name in _HOLIDAYS + _SOLAR_TERMS:
-        try:
-            event_date = date(year, month, day)
-        except ValueError:
-            continue
-        diff = abs((event_date - today).days)
-        if diff == 0:
-            result.append(f"今天是{name}")
-        elif diff <= days:
-            arrow = "还有" if event_date > today else "已过"
-            result.append(f"临近{name}（{arrow}{diff}天）")
+    seen: set[str] = set()
+    for year in (today.year - 1, today.year, today.year + 1):
+        for month, day, name in _HOLIDAYS + _SOLAR_TERMS:
+            try:
+                event_date = date(year, month, day)
+            except ValueError:
+                continue
+            diff = (event_date - today).days
+            if diff == 0:
+                if name not in seen:
+                    result.append(f"今天是{name}")
+                    seen.add(name)
+            elif 0 < diff <= days:
+                if name not in seen:
+                    result.append(f"临近{name}（还有{diff}天）")
+                    seen.add(name)
+            elif -days <= diff < 0:
+                if name not in seen:
+                    result.append(f"临近{name}（已过{-diff}天）")
+                    seen.add(name)
     return result
 
 
