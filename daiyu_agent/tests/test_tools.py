@@ -44,7 +44,8 @@ class TestNearbyEvents:
     def test_within_7_days(self):
         events = _nearby_events(date(2026, 1, 5))
         names = " ".join(events)
-        assert "元旦" in names or "小寒" in names
+        assert "元旦" in names   # 4 days ago
+        assert "小寒" in names   # exact match today
 
     def test_no_events_far_away(self):
         events = _nearby_events(date(2026, 7, 15))
@@ -61,7 +62,7 @@ class TestNearbyEvents:
         names = " ".join(events)
         assert "元旦" in names
 
-    def test_year_boundary_jan_1_sees_new_year_passed(self):
+    def test_year_boundary_jan_2_sees_new_year_passed(self):
         """1月2日应该能看到元旦已过"""
         events = _nearby_events(date(2027, 1, 2))
         names = " ".join(events)
@@ -87,7 +88,7 @@ class TestGetTimeContext:
 
     def test_contains_year(self):
         result = get_time_context.invoke({})
-        assert "2026" in result
+        assert str(date.today().year) in result
 
     def test_is_langchain_tool(self):
         assert hasattr(get_time_context, "invoke")
